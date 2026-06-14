@@ -69,63 +69,70 @@ else:
     st.divider()
 
     # =========================================================
-    # BAGIAN BARU: K-MEANS CLUSTERING & VISUALISASI
+    # BAGIAN: K-MEANS CLUSTERING & INSIGHT (DITAMBAHKAN)
     # =========================================================
-    st.subheader("🤖 Visualisasi K-Means Clustering Kehadiran Mahasiswa")
+    st.subheader("🤖 Analisis Pengelompokan Mahasiswa (K-Means)")
 
-    # 1. Pilih kolom fitur untuk Clustering (sesuaikan nama kolom di CSV kamu)
-    # Di sini saya asumsikan nama kolomnya: 'Total_Hadir' dan 'Persentase_Hadir'
-    # Jika nama kolom jumlah kehadiranmu berbeda (misal: 'Jumlah_Kehadiran'), silakan ganti teksnya.
     kolom_X = "Hadir"
     kolom_Y = "Persentase_Hadir"
 
     if kolom_X in df.columns and kolom_Y in df.columns:
         X = df[[kolom_X, kolom_Y]]
 
-        # 2. Proses K-Means (Contoh: dibagi menjadi 3 Cluster)
+        # 1. Proses K-Means
         kmeans = KMeans(n_clusters=3, random_state=42)
         df["Cluster"] = kmeans.fit_predict(X)
 
-        # 3. Membuat Grafik Menggunakan Matplotlib
-        fig, ax = plt.subplots(figsize=(10, 5))
+        # 2. Logika Penjelasan Cluster (Menentukan siapa yang rajin/tidak)
+        cluster_means = df.groupby("Cluster")[kolom_Y].mean().sort_values(ascending=False)
+        labels = {}
+        status_kategori = ["Sangat Rajin (High)", "Cukup Rajin (Medium)", "Butuh Perhatian (Low)"]
+        for i, cluster_id in enumerate(cluster_means.index):
+            labels[cluster_id] = status_kategori[i]
+        
+        df["Kategori"] = df["Cluster"].map(labels)
 
-        # Menggambar scatter plot dengan warna (c) berdasarkan cluster yang terbentuk
-        scatter = ax.scatter(
-            df[kolom_X],
-            df[kolom_Y],
-            c=df["Cluster"],
-            cmap="viridis",
-            s=100,
-            edgecolors="k",
-        )
+        # 3. Layout Kolom: Kiri (Grafik), Kanan (Penjelasan)
+        col_grafik, col_txt = st.columns([2, 1])
 
-        # Menambahkan label dan judul pada grafik Matplotlib
-        ax.set_title(
-            "Visualisasi K-Means Clustering Kehadiran Mahasiswa", fontsize=14
-        )
-        ax.set_xlabel("Jumlah Kehadiran", fontsize=12)
-        ax.set_ylabel("Persentase Kehadiran (%)", fontsize=12)
-        ax.grid(True, linestyle="--", alpha=0.6)
+        with col_grafik:
+            fig, ax = plt.subplots(figsize=(10, 5))
+            scatter = ax.scatter(
+                df[kolom_X],
+                df[kolom_Y],
+                c=df["Cluster"],
+                cmap="viridis",
+                s=100,
+                edgecolors="k",
+            )
+            ax.set_title("Visualisasi Kelompok Kehadiran Mahasiswa", fontsize=14)
+            ax.set_xlabel("Jumlah Kehadiran", fontsize=12)
+            ax.set_ylabel("Persentase Kehadiran (%)", fontsize=12)
+            ax.grid(True, linestyle="--", alpha=0.6)
+            st.pyplot(fig)
 
-        # Menampilkan legend warna cluster
-        legend = ax.legend(
-            *scatter.legend_elements(), title="Cluster", loc="lower right"
-        )
-        ax.add_artist(legend)
+        with col_txt:
+            st.write("### 💡 Penjelasan Kelompok")
+            st.write("Hasil algoritma K-Means membagi mahasiswa ke dalam 3 kategori:")
+            
+            for cluster_id, nama_kat in labels.items():
+                if "Sangat" in nama_kat:
+                    st.success(f"**{nama_kat}**")
+                elif "Cukup" in nama_kat:
+                    st.warning(f"**{nama_kat}**")
+                else:
+                    st.error(f"**{nama_kat}**")
+            
+            st.info("Kategori ini ditentukan secara otomatis berdasarkan pola kehadiran di dataset.")
 
-        # 4. Tampilkan grafik Matplotlib ke Streamlit
-        st.pyplot(fig)
-
-        # Tambahan: Menampilkan penjelasan cluster dalam bentuk dataframe (opsional)
-        with st.expander("Lihat Hasil Pembagian Cluster per Mahasiswa"):
+        # 4. Tabel Detail (Expander)
+        with st.expander("🔎 Lihat Detail Daftar Mahasiswa per Cluster"):
             st.dataframe(
-                df[["Nama", kolom_X, kolom_Y, "Cluster"]],
+                df[["Nama", "Hadir", "Persentase_Hadir", "Kategori"]],
                 use_container_width=True,
             )
     else:
-        st.error(
-            f"Gagal memproses K-Means. Pastikan kolom '{kolom_X}' dan '{kolom_Y}' ada di file CSV kamu."
-        )
+        st.error(f"Gagal memproses K-Means. Pastikan kolom '{kolom_X}' dan '{kolom_Y}' tersedia.")
 
     st.divider()
 
