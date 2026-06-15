@@ -86,14 +86,15 @@ else:
     # tampil data
     st.subheader("👨‍🎓 Data Absensi Mahasiswa")
     
-    # Buat salinan agar tidak mengganggu data asli untuk K-Means
-    df_utama = df.copy()
+    # 1. Pilih kolom yang ingin ditampilkan (Kecualikan 'Password')
+    kolom_untuk_ditampilkan = ["NIM", "Nama", "Hadir", "Izin", "Sakit", "Alpha", "Persentase_Hadir"]
+    df_tampil = df[kolom_untuk_ditampilkan].copy()
     
-    # Ubah index agar dimulai dari 1
-    df_utama.index = range(1, len(df_utama) + 1)
+    # 2. Ubah index agar dimulai dari 1
+    df_tampil.index = range(1, len(df_tampil) + 1)
     
-    # Tampilkan ke layar
-    st.dataframe(df_utama, use_container_width=True)
+    # 3. Tampilkan ke layar
+    st.dataframe(df_tampil, use_container_width=True)
 
     # grafik bawaan
     st.subheader("📈 Grafik Kehadiran")
@@ -157,25 +158,46 @@ else:
                     st.error(f"**{nama_kat}**")
             
             st.info("Kategori ini ditentukan secara otomatis berdasarkan pola kehadiran di dataset.")
-
-        # 4. Tabel Detail (Expander)
-        # 4. Tabel Detail (Expander)
-        with st.expander("🔎 Lihat Detail Daftar Mahasiswa per Cluster"):
-            # Pilih kolom yang ingin ditampilkan
-            df_tampil = df[["Nama", "Hadir", "Persentase_Hadir", "Kategori"]].copy()
-            
-            # Ubah index agar dimulai dari 1
-            df_tampil.index = range(1, len(df_tampil) + 1)
-            
-            # Tampilkan ke layar
-            st.dataframe(
-                df_tampil,
-                use_container_width=True,
-            )
     else:
         st.error(f"Gagal memproses K-Means. Pastikan kolom '{kolom_X}' dan '{kolom_Y}' tersedia.")
 
     st.divider()
+    
+# # --- FITUR PENCARIAN & VERIFIKASI DATA ---
+    st.subheader("🔍 Cari Data atau Simulasi Kehadiran")
+    col_a, col_b = st.columns(2)
+    with col_a:
+        cari_nama = st.text_input("Nama Mahasiswa:")
+    with col_b:
+        input_hadir = st.number_input("Jumlah Hadir (Opsional):", min_value=0, value=0, step=1)
+
+    if st.button("Proses Data"):
+        if cari_nama:
+            # 1. Cari data di database
+            hasil = df[df["Nama"].str.contains(cari_nama, case=False, na=False)]
+            
+            if not hasil.empty:
+                data_asli = hasil.iloc[0]
+                
+                # Tampilkan Tabel Data Mahasiswa yang ditemukan
+                st.write(f"Ditemukan data untuk: **{data_asli['Nama']}**")
+                cols_show = ["Nama", "Hadir", "Persentase_Hadir", "Kategori"]
+                st.dataframe(hasil[cols_show], use_container_width=True)
+                
+                # 2. Logika Verifikasi (Jika ada input hadir)
+                if input_hadir > 0:
+                    hadir_asli = data_asli["Hadir"]
+                    if int(input_hadir) == int(hadir_asli):
+                        st.success(f"✅ **Verifikasi Berhasil**: Data sinkron! {data_asli['Nama']} masuk kategori **{data_asli['Kategori']}**.")
+                    else:
+                        st.error(f"⚠️ **Verifikasi Gagal**: Data kehadiran yang Anda masukkan ({input_hadir}x) tidak cocok dengan catatan sistem kami ({hadir_asli}x).")
+                else:
+                    # Jika tidak ada input hadir, cukup tampilkan kategori
+                    st.info(f"Mahasiswa **{data_asli['Nama']}** saat ini berada di kategori **{data_asli['Kategori']}**")
+            else:
+                st.warning("Nama mahasiswa tidak ditemukan.")
+        else:
+            st.error("Silakan masukkan nama mahasiswa terlebih dahulu.")
 
    # =========================================================
     # BAGIAN: FEEDBACK MAHASISWA & REKAP STATISTIK
