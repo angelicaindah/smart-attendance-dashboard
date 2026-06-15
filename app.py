@@ -5,6 +5,33 @@ from login import login_page
 # Tambahkan library untuk clustering dan visualisasi
 import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
+import os
+
+# --- LANGKAH 1: PERSIAPAN CATATAN FEEDBACK ---
+FILE_FEEDBACK = "data/data_feedback.csv"
+
+# Buat file CSV kosong secara otomatis jika belum ada
+if not os.path.exists("data"):
+    os.makedirs("data")
+if not os.path.exists(FILE_FEEDBACK):
+    pd.DataFrame(columns=["NIM", "Feedback"]).to_csv(FILE_FEEDBACK, index=False)
+
+# Fungsi (alat tulis) untuk menyimpan pilihan mahasiswa ke file CSV
+def simpan_feedback(nim, status):
+    df_fb = pd.read_csv(FILE_FEEDBACK)
+    
+    # Hapus data lama jika mahasiswa ini sudah pernah memencet tombol sebelumnya
+    df_fb = df_fb[df_fb["NIM"].astype(str) != str(nim)]
+    
+    # Masukkan pilihan baru
+    df_baru = pd.DataFrame([{"NIM": str(nim), "Feedback": status}])
+    df_fb = pd.concat([df_fb, df_baru], ignore_index=True)
+    
+    # Simpan kembali ke file CSV
+    df_fb.to_csv(FILE_FEEDBACK, index=False)
+
+# Library tambahan untuk menangani timing (digunakan dalam implementasi JS)
+import time 
 
 st.set_page_config(
     page_title="Smart Attendance Dashboard", page_icon="🎓", layout="wide"
@@ -58,9 +85,15 @@ else:
 
     # tampil data
     st.subheader("👨‍🎓 Data Absensi Mahasiswa")
-    st.dataframe(df, use_container_width=True)
-
-    st.divider()
+    
+    # Buat salinan agar tidak mengganggu data asli untuk K-Means
+    df_utama = df.copy()
+    
+    # Ubah index agar dimulai dari 1
+    df_utama.index = range(1, len(df_utama) + 1)
+    
+    # Tampilkan ke layar
+    st.dataframe(df_utama, use_container_width=True)
 
     # grafik bawaan
     st.subheader("📈 Grafik Kehadiran")
@@ -69,7 +102,7 @@ else:
     st.divider()
 
     # =========================================================
-    # BAGIAN: K-MEANS CLUSTERING & INSIGHT (DITAMBAHKAN)
+    # BAGIAN: K-MEANS CLUSTERING & INSIGHT
     # =========================================================
     st.subheader("🤖 Analisis Pengelompokan Mahasiswa (K-Means)")
 
@@ -126,9 +159,17 @@ else:
             st.info("Kategori ini ditentukan secara otomatis berdasarkan pola kehadiran di dataset.")
 
         # 4. Tabel Detail (Expander)
+        # 4. Tabel Detail (Expander)
         with st.expander("🔎 Lihat Detail Daftar Mahasiswa per Cluster"):
+            # Pilih kolom yang ingin ditampilkan
+            df_tampil = df[["Nama", "Hadir", "Persentase_Hadir", "Kategori"]].copy()
+            
+            # Ubah index agar dimulai dari 1
+            df_tampil.index = range(1, len(df_tampil) + 1)
+            
+            # Tampilkan ke layar
             st.dataframe(
-                df[["Nama", "Hadir", "Persentase_Hadir", "Kategori"]],
+                df_tampil,
                 use_container_width=True,
             )
     else:
@@ -136,7 +177,90 @@ else:
 
     st.divider()
 
-    # logout
+   # =========================================================
+    # BAGIAN: FEEDBACK MAHASISWA & REKAP STATISTIK
+    # =========================================================
+    st.divider()
+    st.subheader("📝 Feedback Penggunaan Web")
+    
+    # --- MENAMPILKAN ANGKA STATISTIK ---
+    # Baca buku catatan kita
+    df_baca_fb = pd.read_csv(FILE_FEEDBACK)
+    
+    # Hitung jumlah orang untuk masing-masing pilihan
+    jml_puas = len(df_baca_fb[df_baca_fb["Feedback"] == "Puas"])
+    jml_kurang = len(df_baca_fb[df_baca_fb["Feedback"] == "Kurang Puas"])
+    jml_gangguan = len(df_baca_fb[df_baca_fb["Feedback"] == "Banyak Gangguan"])
+    
+    # Tampilkan dalam satu kotak kecil menggunakan st.info
+    st.info(f"📊 **Statistik Saat Ini:** 👍 Puas: **{jml_puas}** |  😢 Kurang Puas: **{jml_kurang}** |  😡 Banyak Gangguan: **{jml_gangguan}**")
+    
+    st.write("---")
+    st.write("Bagaimana pengalaman kamu mengakses web ini hari ini?")
+
+    # --- FUNGSI EFEK NGEPOP ---
+    def efek_ngepop_css(emoji):
+        html_code = f"""
+        <style>
+        @keyframes popUp {{
+            0% {{ transform: scale(0.5) translateY(0px); opacity: 1; }}
+            50% {{ transform: scale(1.5) translateY(-60px); opacity: 1; }}
+            100% {{ transform: scale(1) translateY(-120px); opacity: 0; }}
+        }}
+        .emoji-container {{
+            position: fixed;
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9999;
+            font-size: 60px;
+            display: flex;
+            gap: 20px;
+            pointer-events: none;
+        }}
+        .emoji-pop {{
+            animation: popUp 1.5s ease-out forwards;
+        }}
+        .emoji-pop:nth-child(1) {{ animation-delay: 0s; }}
+        .emoji-pop:nth-child(2) {{ animation-delay: 0.15s; }}
+        .emoji-pop:nth-child(3) {{ animation-delay: 0.3s; }}
+        </style>
+        <div class="emoji-container">
+            <div class="emoji-pop">{emoji}</div>
+            <div class="emoji-pop">{emoji}</div>
+            <div class="emoji-pop">{emoji}</div>
+        </div>
+        """
+        st.markdown(html_code, unsafe_allow_html=True)
+
+    # --- TOMBOL FEEDBACK ---
+    col_fb1, col_fb2, col_fb3 = st.columns(3)
+
+    with col_fb1:
+        if st.button("Puas 👍", use_container_width=True):
+            simpan_feedback(st.session_state.nim, "Puas") # Simpan ke catatan
+            st.success("Terima kasih! Senang web ini bisa berjalan lancar untukmu.")
+            efek_ngepop_css("👍") # Munculkan animasi
+            
+    with col_fb2:
+        if st.button("Kurang Puas 😢", use_container_width=True):
+            simpan_feedback(st.session_state.nim, "Kurang Puas") # Simpan ke catatan
+            st.warning("Terima kasih atas feedback-nya. Kami akan terus meningkatkannya!")
+            efek_ngepop_css("😢") # Munculkan animasi
+
+    with col_fb3:
+        if st.button("Banyak Gangguan 😡", use_container_width=True):
+            simpan_feedback(st.session_state.nim, "Banyak Gangguan") # Simpan ke catatan
+            st.error("Mohon maaf atas ketidaknyamanannya. Tim kami akan mengecek kendala ini.")
+            efek_ngepop_css("😡") # Munculkan animasi
+
+    st.divider()
+
+    # =========================================================
+    # BAGIAN: LOGOUT
+    # =========================================================
+    st.divider()
+    
     col1, col2, col3 = st.columns([3, 2, 3])
 
     with col2:
