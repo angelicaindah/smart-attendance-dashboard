@@ -15,6 +15,21 @@ from datetime import datetime
 FILE_RIWAYAT = "data/riwayat_absen.csv"
 FILE_FEEDBACK = "data/data_feedback.csv"
 
+def simpan_scan_qr(nim):
+    # Memastikan folder 'data' ada
+    if not os.path.exists("data"):
+        os.makedirs("data")
+        
+    # Buat data baru
+    data_baru = pd.DataFrame({
+        "NIM": [nim],
+        # Perhatikan di sini: langsung panggil datetime.now()
+        "Waktu_Absen": [datetime.now().strftime("%Y-%m-%d %H:%M:%S")],
+        "Status": ["Hadir"]
+    })
+    
+    # Simpan (append) ke file CSV
+    data_baru.to_csv(FILE_RIWAYAT, mode='a', index=False, header=not os.path.exists(FILE_RIWAYAT))
 
 # =========================
 # SETTING HALAMAN
