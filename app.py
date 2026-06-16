@@ -477,8 +477,10 @@ else:
     with col_tengah:
 
 
-        streamlit_url = "https://angelicaindah-smart-attendance-dashboard.streamlit.app"  
-        data_qr = f"{streamlit_url}?nim={st.session_state.nim}"
+        data_qr = (
+            f"http://192.168.18.18:8501/"
+            f"?nim={st.session_state.nim}"
+        )
 
 
         qr_img = generate_qr(
