@@ -29,7 +29,7 @@ def login_page():
         ):
 
             df = pd.read_csv(
-                "data/dataset_absensi_50_mahasiswa.csv"
+                "data/dataset_absensi_300_mahasiswa.csv"
             )
 
 

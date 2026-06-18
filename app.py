@@ -98,7 +98,7 @@ if "nim" in query_params:
     nim_dari_qr = query_params["nim"]
     
     # Cek apakah mahasiswa ada di database
-    df_mahasiswa = pd.read_csv("data/dataset_absensi_50_mahasiswa.csv")
+    df_mahasiswa = pd.read_csv("data/dataset_absensi_300_mahasiswa.csv")
     mahasiswa = df_mahasiswa[df_mahasiswa["NIM"].astype(str) == str(nim_dari_qr)]
     
     if not mahasiswa.empty:
@@ -136,7 +136,7 @@ if st.session_state.login == False:
 
 st.title("🎓 Smart Attendance Dashboard")
 
-df_mahasiswa = pd.read_csv("data/dataset_absensi_50_mahasiswa.csv")
+df_mahasiswa = pd.read_csv("data/dataset_absensi_300_mahasiswa.csv")
 mahasiswa = df_mahasiswa[df_mahasiswa["NIM"].astype(str) == str(st.session_state.nim)]
 
 if not mahasiswa.empty:
